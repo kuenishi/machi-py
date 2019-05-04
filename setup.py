@@ -9,7 +9,7 @@ setup(
     url="https://github.com/kuenishi/machi-py/",
     packages=find_packages(exclude=["contrib", "docs", "tests"]),
     python_requires=">=3.7",
-    extras_require={"test": ["coverage", "black", "pytest", "pytest-xdist"]},
+    extras_require={"test": ["coverage", "black", "pytest", "pytest-xdist", "numpy"]},
     classifiers=[
         "Development Status :: 3 - Alpha",
         #   4 - Beta
