@@ -45,8 +45,9 @@ def main():
     sample_stats = Stats('sample time (sec)')
     timer = time.time()
     keys = []
+    counter = 0
     while True:
-        i = random.randint(0, 345678)
+        i = random.randint(0, counter)
         with append_stats.measure():
             key = machi.append(str(i).encode())
             keys.append( (key, i) )
@@ -57,7 +58,13 @@ def main():
                 for key, i in test_keys:
                     data = machi.get(*key)
                     assert data == str(i).encode()
+
+        if len(keys) > 1024 * 1024:
+            d = random.randint(0, counter)
+            key = keys[d]
+            machi.trim(*key)
                     
+        counter += 1
         t = time.time()
         if t > timer + 1:
             append_stats.pp()
