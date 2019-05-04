@@ -1,4 +1,4 @@
-'''Machi
+"""Machi
 
 A file store only with append and trim.
 
@@ -18,7 +18,7 @@ file is to be preset.
 
 Data files has filename <gen>.machd
 
-'''
+"""
 import binascii
 import glob
 import os
@@ -27,8 +27,9 @@ from typing import Optional
 
 from .rwlock import RWLock
 
+
 class _MachiGen:
-    index_format = 'QQQIi'
+    index_format = "QQQIi"
     index_format_size = calcsize(index_format)
 
     def __init__(self, dir, gen, creat=True, temp=False):
@@ -36,10 +37,10 @@ class _MachiGen:
         self.dir = dir
         self.temp = temp
         self.index = {}
-        self.indexname = os.path.join(self.dir, f'{self.gen}.machi')
-        self.dataname = os.path.join(self.dir, f'{self.gen}.machd')
+        self.indexname = os.path.join(self.dir, f"{self.gen}.machi")
+        self.dataname = os.path.join(self.dir, f"{self.gen}.machd")
         if creat:
-            flag = os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_TRUNC
+            flag = os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_TRUNC
             self.indexfile = os.open(self.indexname, flag)
             self.datafile = os.open(self.dataname, flag)
             self._ref = 0
@@ -57,14 +58,12 @@ class _MachiGen:
             data_stat = os.stat(self.dataname)
             self.pos = data_stat.st_size
 
-            flag = os.O_RDWR|os.O_EXCL
+            flag = os.O_RDWR | os.O_EXCL
             self.indexfile = os.open(self.indexname, flag)
 
             index_pos = 0
             while index_pos < self.index_pos:
-                data = os.pread(self.indexfile,
-                                self.index_format_size,
-                                index_pos)
+                data = os.pread(self.indexfile, self.index_format_size, index_pos)
                 g, o, l, c, s = unpack(self.index_format, data)
                 assert g == gen
                 self.index[o] = l, c, s, index_pos
@@ -90,11 +89,10 @@ class _MachiGen:
         self.pos += len(data)
 
         crc = binascii.crc32(data)
-        buf = pack(self.index_format, self.gen, pos,
-                   len(data), crc, 1)
+        buf = pack(self.index_format, self.gen, pos, len(data), crc, 1)
         # print('append>', self.front, crc, data, self.pos, len(data))
         r = os.pwrite(self.indexfile, buf, self.index_pos)
-        assert 32 == r # calcsize(self.index_format)
+        assert 32 == r  # calcsize(self.index_format)
         self.index[pos] = (len(data), crc, 1, self.index_pos)
         self.index_pos += r
 
@@ -116,8 +114,11 @@ class _MachiGen:
             # Trimmed
             return None
         elif st != 1:
-            raise RuntimeError("Invalid State {} to read {},{} @{}".format(
-                st, offset, length, self.dataname))
+            raise RuntimeError(
+                "Invalid State {} to read {},{} @{}".format(
+                    st, offset, length, self.dataname
+                )
+            )
 
         if length == length1:
             assert crc == binascii.crc32(data)
@@ -135,12 +136,11 @@ class _MachiGen:
             return None
         assert length == length1
 
-        buf = pack(self.index_format, self.gen, offset,
-                   len(data), crc, -1)
+        buf = pack(self.index_format, self.gen, offset, len(data), crc, -1)
         r = os.pwrite(self.indexfile, buf, index_pos)
         # print('append>', self.front, crc, data, self.pos, len(data))
 
-        assert 32 == r # calcsize(self.index_format)
+        assert 32 == r  # calcsize(self.index_format)
         self.index[offset] = (length, crc, -1, index_pos)
 
         self._ref -= 1
@@ -154,16 +154,16 @@ class _MachiGen:
 
 
 def _parse_file(path):
-    print('Previous era data {} found. Loading...'.format(path))
+    print("Previous era data {} found. Loading...".format(path))
     dir, file = os.path.split(path)
     base, ext = os.path.splitext(file)
-    assert ext == '.machi'
+    assert ext == ".machi"
     gen = int(base)
     return gen, _MachiGen(dir, gen, creat=False, temp=False)
 
 
 class MachiStore:
-    def __init__(self, dir='/tmp', maxlen=1024*1024, temp=False):
+    def __init__(self, dir="/tmp", maxlen=1024 * 1024, temp=False):
         self.dir = dir
         self.temp = temp
 
@@ -171,12 +171,12 @@ class MachiStore:
 
         # TODO(kuenishi): Load existent files
         if self.temp:
-            for file in glob.iglob(os.path.join(dir, '[0-9]*.machi')):
+            for file in glob.iglob(os.path.join(dir, "[0-9]*.machi")):
                 raise RuntimeError("temp but file exists: " + file)
-            for file in glob.iglob(os.path.join(dir, '[0-9]*.machd')):
+            for file in glob.iglob(os.path.join(dir, "[0-9]*.machd")):
                 raise RuntimeError("temp but file exists: " + file)
 
-        for file in glob.iglob(os.path.join(dir, '[0-9]*.machi')):
+        for file in glob.iglob(os.path.join(dir, "[0-9]*.machi")):
             gen, machi_gen = _parse_file(file)
             self.back[gen] = machi_gen
 
@@ -191,7 +191,7 @@ class MachiStore:
 
         self.rwlock = RWLock()
 
-    def append(self, data: bytes): # -> File, offset, length
+    def append(self, data: bytes):  # -> File, offset, length
         with self.rwlock.wrlock():
             result = self.front.append(data)
             gen = self.gen
@@ -203,8 +203,7 @@ class MachiStore:
                     self.back[self.gen] = self.front
                     self.gen += 1
 
-                self.front = _MachiGen(self.dir, self.gen,
-                                       temp=self.temp)
+                self.front = _MachiGen(self.dir, self.gen, temp=self.temp)
 
             offset, length = result
             return gen, offset, length

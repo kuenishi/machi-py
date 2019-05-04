@@ -3,14 +3,15 @@ import tempfile
 
 from machi import MachiStore
 
+
 def test_smoke():
     testdir = tempfile.TemporaryDirectory()
     machi = MachiStore(maxlen=37, temp=True)
     try:
 
-        key = machi.append(b'1')
+        key = machi.append(b"1")
         data = machi.get(*key)
-        assert b'1' == data
+        assert b"1" == data
 
         machi.trim(*key)
         data = machi.get(*key)
@@ -46,8 +47,8 @@ def test_persistence():
     with tempfile.TemporaryDirectory() as testdir:
         machi = MachiStore(maxlen=29, temp=False, dir=testdir)
         try:
-            key = machi.append(b'1')
-            assert b'1' == machi.get(*key)
+            key = machi.append(b"1")
+            assert b"1" == machi.get(*key)
         finally:
             machi.close()
 
@@ -56,6 +57,6 @@ def test_persistence():
             keys = list(machi.keys())
             assert 1 == len(keys)
             key = keys[0]
-            assert b'1' == machi.get(*key)
+            assert b"1" == machi.get(*key)
         finally:
             machi.close()

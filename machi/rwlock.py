@@ -13,11 +13,11 @@ class LockContext:
 
 
 class RWLock:
-    '''Reader-writer lock
+    """Reader-writer lock
 
     TODO(kuenishi): Add unit tests
 
-    '''
+    """
 
     def __init__(self):
         self.cv = threading.Condition()
@@ -33,9 +33,11 @@ class RWLock:
     def wrlock(self):
         with self.cv:
             thread_id = threading.get_ident()
-            self.cv.wait_for(lambda: self.writer is None and
-                             self.writer != thread_id and
-                             len(self.reader) == 0)
+            self.cv.wait_for(
+                lambda: self.writer is None
+                and self.writer != thread_id
+                and len(self.reader) == 0
+            )
             self.writer = thread_id
             return LockContext(self)
 
@@ -48,9 +50,10 @@ class RWLock:
                 self.reader.remove(thread_id)
             self.cv.notify_all()
 
+
 class DummyLock:
-    '''Dummy class for multithread-unsafe fast cache class
-    '''
+    """Dummy class for multithread-unsafe fast cache class
+    """
 
     def __init__(self):
         pass
