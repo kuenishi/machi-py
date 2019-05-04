@@ -1,6 +1,9 @@
 import argparse
+import binascii
 import random
 import time
+
+import numpy
 
 from machi import MachiStore
 
@@ -27,17 +30,20 @@ class Stats:
         self.stats.append(duration)
         
     def pp(self):
-        print(self.name, sum(self.stats) / len(self.stats))
+        if self.stats:
+            print(self.name, sum(self.stats) / len(self.stats))
         
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--maxlen', type=int, help="Max len",
-                        default=65536)
+                        default=4096)
     parser.add_argument('--dir', type=str, help="Data Directory",
                         default="/tmp")
+    parser.add_argument('--interval', type=int, help="interval",
+                        default=1)
     args = parser.parse_args()
-    
+    assert args.interval > 0
     print(args)
     
     machi = MachiStore(maxlen=args.maxlen, dir=args.dir)
@@ -46,27 +52,32 @@ def main():
     timer = time.time()
     keys = []
     counter = 0
+    tenM = 1024 * 1024 * 10
+    oneM = 1024 * 1024
     while True:
-        i = random.randint(0, counter)
+        length = random.randint(oneM, tenM)
+        buf = numpy.random.bytes(length)
+        crc = binascii.crc32(buf)
         with append_stats.measure():
-            key = machi.append(str(i).encode())
-            keys.append( (key, i) )
+            key = machi.append(buf)
+            keys.append( (key, crc) )
 
         if len(keys) > 10:
             with sample_stats.measure():
                 test_keys = random.sample(keys, 10)
-                for key, i in test_keys:
+                for key, crc0 in test_keys:
                     data = machi.get(*key)
-                    assert data == str(i).encode()
+                    crc = binascii.crc32(data)
+                    assert crc0 == crc
 
         if len(keys) > 1024 * 1024:
-            d = random.randint(0, counter)
-            key = keys[d]
+            key = random.sample(keys.keys(), 1)
             machi.trim(*key)
                     
         counter += 1
         t = time.time()
-        if t > timer + 1:
+        if t > timer + args.interval:
+            print("Counter:", counter)
             append_stats.pp()
             sample_stats.pp()
             timer = t
