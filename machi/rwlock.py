@@ -19,14 +19,18 @@ class RWLock:
 
     """
 
-    def __init__(self):
+    def __init__(self, reentrant=True):
         self.cv = threading.Condition()
         self.writer = None
         self.reader = set()
+        self.reentrant = reentrant
 
     def rdlock(self):
         with self.cv:
             self.cv.wait_for(lambda: self.writer is None)
+            thread_id = threading.get_ident()
+            if not self.reentrant and thread_id in self.reader:
+                raise RuntimeError("The lock is not reentrant")
             self.reader.add(threading.get_ident())
             return LockContext(self)
 
@@ -46,7 +50,7 @@ class RWLock:
             thread_id = threading.get_ident()
             if self.writer == thread_id:
                 self.writer = None
-            else:
+            elif self.reentrant and thread_id in self.reader:
                 self.reader.remove(thread_id)
             self.cv.notify_all()
 

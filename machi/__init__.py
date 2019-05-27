@@ -1,1 +1,1 @@
-from machi.machi import MachiStore
+from machi.machi import MachiStore # NOQA

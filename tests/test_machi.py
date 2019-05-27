@@ -39,7 +39,7 @@ def test_smoke():
         for i in random.sample(range(repeat), repeat):
             key = keys[i]
             data = machi.get(*key)
-            assert None == data
+            assert data is None
 
     finally:
         machi.close()
@@ -50,6 +50,8 @@ def test_persistence():
     with tempfile.TemporaryDirectory() as testdir:
         machi = MachiStore(maxlen=29, temp=False, dir=testdir)
         try:
+            for key in machi.keys():
+                assert isinstance(key, tuple)
             key = machi.append(b"1")
             assert b"1" == machi.get(*key)
         finally:

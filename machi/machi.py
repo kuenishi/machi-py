@@ -63,7 +63,8 @@ class _MachiGen:
 
             index_pos = 0
             while index_pos < self.index_pos:
-                data = os.pread(self.indexfile, self.index_format_size, index_pos)
+                data = os.pread(self.indexfile, self.index_format_size,
+                                index_pos)
                 g, o, l, c, s = unpack(self.index_format, data)
                 assert g == gen
                 self.index[o] = l, c, s, index_pos
