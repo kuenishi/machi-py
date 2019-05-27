@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="machi-store",
-    version="0.0.3",
+    version="0.0.4",
     description="Persistent Blob Store",
     author="Kota UENISHI",
     author_email="kuenishi@gmail.com",
