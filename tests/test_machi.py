@@ -29,6 +29,9 @@ def test_smoke():
             data = machi.get(*key)
             assert str(i).encode() == data
 
+        for key in machi.keys():
+            assert isinstance(key, tuple)
+
         for i in random.sample(range(repeat), repeat):
             key = keys[i]
             machi.trim(*key)
@@ -54,6 +57,8 @@ def test_persistence():
 
         machi = MachiStore(maxlen=29, temp=False, dir=testdir)
         try:
+            for key in machi.keys():
+                assert isinstance(key, tuple)
             keys = list(machi.keys())
             assert 1 == len(keys)
             key = keys[0]
