@@ -106,7 +106,7 @@ def test_file_deletion2():
                 keys.append(key)
                 assert str(i).encode() == machi.get(*key)
 
-            assert 8 == len(os.listdir(testdir))
+            assert 6 == len(os.listdir(testdir))
 
             for key in keys:
                 machi.trim(*key)
