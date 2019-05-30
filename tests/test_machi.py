@@ -21,11 +21,9 @@ def test_smoke():
         for i in random.sample(range(repeat), repeat):
             key = machi.append(str(i).encode())
             keys[i] = key
-            # print(key)
 
         for i in random.sample(range(repeat), repeat):
             key = keys[i]
-            # print(key)
             data = machi.get(*key)
             assert str(i).encode() == data
 
@@ -67,3 +65,52 @@ def test_persistence():
             assert b"1" == machi.get(*key)
         finally:
             machi.close()
+
+import os
+def test_file_deletion():
+    with tempfile.TemporaryDirectory() as testdir:
+        keys = []
+        with MachiStore(maxlen=29, temp=False, dir=testdir) as machi:
+            key = machi.append(b"1")
+            keys.append(key)
+            assert b"1" == machi.get(*key)
+
+        with MachiStore(maxlen=29, temp=False, dir=testdir) as machi:
+            for key in keys:
+                machi.trim(*key)
+            assert 0 == len(list(machi.keys()))
+
+        with MachiStore(maxlen=29, temp=False, dir=testdir) as machi:
+            assert 0 == len(list(machi.keys()))
+
+
+def test_file_deletion2():
+    with tempfile.TemporaryDirectory() as testdir:
+        keys = []
+        with MachiStore(maxlen=29, temp=False, dir=testdir) as machi:
+            key = machi.append(b"1")
+            keys.append(key)
+            assert b"1" == machi.get(*key)
+
+        with open(os.path.join(testdir, '1.machi'), 'wb') as fp:
+            pass
+        with open(os.path.join(testdir, '1.machd'), 'wb') as fp:
+            pass
+
+        for f in os.scandir(testdir):
+            print(f.name, f.stat().st_size)
+
+        with MachiStore(maxlen=29, temp=False, dir=testdir) as machi:
+            for i in range(30):
+                key = machi.append(str(i).encode())
+                keys.append(key)
+                assert str(i).encode() == machi.get(*key)
+
+            assert 8 == len(os.listdir(testdir))
+
+            for key in keys:
+                machi.trim(*key)
+            assert 0 == len(list(machi.keys()))
+
+        with MachiStore(maxlen=29, temp=False, dir=testdir) as machi:
+            assert 0 == len(list(machi.keys()))

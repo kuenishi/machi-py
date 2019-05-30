@@ -39,6 +39,7 @@ class _MachiGen:
         self.index = {}
         self.indexname = os.path.join(self.dir, f"{self.gen}.machi")
         self.dataname = os.path.join(self.dir, f"{self.gen}.machd")
+        self._ref = 0
         if creat:
             flag = os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_TRUNC
             self.indexfile = os.open(self.indexname, flag)
@@ -58,8 +59,26 @@ class _MachiGen:
             data_stat = os.stat(self.dataname)
             self.pos = data_stat.st_size
 
-            flag = os.O_RDWR | os.O_EXCL
+            # Renaming original index file to a backup, then copy back
+            # to a fresh one. This is because Linux BUG, pwrite(2)
+            # says:
+            # 
+            # "POSIX requires that opening a file with the O_APPEND
+            # flag should have no effect on the location at which
+            # pwrite() writes data.  However, on Linux, if a file is
+            # opened with O_APPEND, pwrite() appends data to the end
+            # of the file, regardless of the value of offset."
+            bak = '{}.bak'.format(self.indexname)
+            os.rename(self.indexname, bak)
+            flag = os.O_RDWR | os.O_EXCL | os.O_CREAT | os.O_TRUNC
             self.indexfile = os.open(self.indexname, flag)
+            bufsize = 4 * 1024 * 1024
+            with open(bak, 'rb') as fp:
+                while True:
+                    buf = os.read(fp.fileno(), bufsize)
+                    if not buf:
+                        break
+                    os.write(self.indexfile, buf)
 
             index_pos = 0
             while index_pos < self.index_pos:
@@ -69,10 +88,12 @@ class _MachiGen:
                 assert g == gen
                 self.index[o] = l, c, s, index_pos
 
+                if s == 1:
+                    self._ref += 1
+
                 index_pos += self.index_format_size
 
-            self.datafile = os.open(self.dataname, flag)
-            self._ref = 0
+            self.datafile = os.open(self.dataname, os.O_RDONLY)
 
     def __len__(self):
         return len(self.index) - self._ref
@@ -111,6 +132,7 @@ class _MachiGen:
 
         length1, crc, st, _ = self.index[offset]
         data = os.pread(self.datafile, length, offset)
+
         if st == -1:
             # Trimmed
             return None
@@ -131,13 +153,13 @@ class _MachiGen:
             return None
 
         length1, crc, st, index_pos = self.index[offset]
-        data = os.pread(self.datafile, length, offset)
+        # data = os.pread(self.datafile, length, offset)
         if st == -1:
             # Trimmed
             return None
-        assert length == length1
+        # assert length == length1
 
-        buf = pack(self.index_format, self.gen, offset, len(data), crc, -1)
+        buf = pack(self.index_format, self.gen, offset, length1, crc, -1)
         r = os.pwrite(self.indexfile, buf, index_pos)
         # print('append>', self.front, crc, data, self.pos, len(data))
 
@@ -149,7 +171,7 @@ class _MachiGen:
     def close(self):
         os.close(self.indexfile)
         os.close(self.datafile)
-        if self.temp:
+        if self.temp or self._ref == 0:
             os.remove(self.indexname)
             os.remove(self.dataname)
 
@@ -223,9 +245,8 @@ class MachiStore:
                 return self.front.get(offset, length)
 
             f = self.back.get(gen)
-            # print(f, bool(f))
-            # print(self.back)
-            if f:
+
+            if f is not None:
                 return f.get(offset, length)
 
             return None
@@ -238,7 +259,7 @@ class MachiStore:
 
             f = self.back.get(gen)
 
-            if f:
+            if f is not None:
                 f.trim(offset, length)
                 if f.ref == 0:
                     f.close()
@@ -251,3 +272,9 @@ class MachiStore:
             self.front.close()
             for store in self.back.values():
                 store.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
