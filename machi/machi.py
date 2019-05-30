@@ -173,9 +173,9 @@ class _MachiGen:
         os.close(self.indexfile)
         os.close(self.datafile)
         if self.temp or self._ref == 0:
-            if os.stat(self.indexname):
+            if os.path.exists(self.indexname):
                 os.remove(self.indexname)
-            if os.stat(self.dataname):
+            if os.path.exists(self.dataname):
                 os.remove(self.dataname)
 
 
