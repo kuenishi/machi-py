@@ -79,6 +79,7 @@ class _MachiGen:
                     if not buf:
                         break
                     os.write(self.indexfile, buf)
+            os.remove(bak)
 
             index_pos = 0
             while index_pos < self.index_pos:
