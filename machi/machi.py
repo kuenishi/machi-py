@@ -173,8 +173,10 @@ class _MachiGen:
         os.close(self.indexfile)
         os.close(self.datafile)
         if self.temp or self._ref == 0:
-            os.remove(self.indexname)
-            os.remove(self.dataname)
+            if os.stat(self.indexname):
+                os.remove(self.indexname)
+            if os.stat(self.dataname):
+                os.remove(self.dataname)
 
 
 def _parse_file(path):
